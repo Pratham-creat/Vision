@@ -6,4 +6,5 @@ storage/*
 !storage/.gitkeep
 frontend/node_modules/
 frontend/dist/
+*.tsbuildinfo
 .env
