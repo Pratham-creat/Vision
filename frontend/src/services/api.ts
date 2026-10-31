@@ -1,0 +1,27 @@
+import type { Method, ProcessResult } from "../types";
+
+const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const endpoint = (path: string) => `${API}${path}`;
+
+export async function health(): Promise<boolean> {
+  try { return (await fetch(endpoint("/health"))).ok; } catch { return false; }
+}
+
+export async function upload(file: File) {
+  const form = new FormData(); form.append("file", file);
+  const response = await fetch(endpoint("/api/v1/images/upload"), { method: "POST", body: form });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json() as Promise<{ image_id: string; width: number; height: number; file_size: number }>;
+}
+
+export async function process(imageId: string, filename: string, method: Method, budget: number, iterations: number, seed: number) {
+  const response = await fetch(endpoint("/api/v1/images/process"), {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image_id: imageId, filename, method, budget, iterations, seed }),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return response.json() as Promise<ProcessResult>;
+}
+
+export function assetUrl(path: string) { return path.startsWith("http") ? path : endpoint(path); }
+export { API };
