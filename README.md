@@ -94,4 +94,4 @@ Tests cover perturbation bounds, dimensions, reproducibility, color conversion, 
 
 ## Research methodology and limitations
 
-Record the method, budget, iterations, seed, metrics, and processing time for each experiment. Compare original and modified images under controlled settings, then evaluate compatible models through an explicit adapter that returns labels and confidence values. No API key is bundled, no model result is fabricated, and an unavailable adapter is reported as “AI evaluation not configured.” Results are image/model/dataset specific and should not be generalized without an appropriate benchmark.
+Record the method, budget, iterations, seed, metrics, and processing time for each experiment. Compare original and modified images under controlled settings, then evaluate compatible models through an explicit adapter that returns labels and confidence values. No API key is bundled, no model result is fabricated, and an unavailable adapter is reported as “AI evaluation not configured.” Results are image/model/dataset specific and should not be a generalized without an appropriate benchmark.
