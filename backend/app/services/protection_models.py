@@ -24,12 +24,29 @@ def load_protection_models() -> ProtectionModelBundle:
     module_name, attribute = target.split(":", 1)
     if not module_name or not attribute:
         raise RuntimeError("VISION_PROTECTION_ADAPTER must use module:callable syntax.")
-    factory = getattr(importlib.import_module(module_name), attribute, None)
-    if not callable(factory):
-        raise RuntimeError(f"Protection adapter factory '{target}' is not callable.")
-    bundle = factory()
+    try:
+        module = importlib.import_module(module_name)
+        factory = getattr(module, attribute, None)
+        if not callable(factory):
+            raise RuntimeError(f"Protection adapter factory '{target}' is not callable.")
+        bundle = factory()
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        raise RuntimeError(f"Could not initialize protection adapter '{target}': {exc}") from exc
+
     if not hasattr(bundle, "identity_model") or not hasattr(bundle, "geometry_model"):
         raise RuntimeError(
             "Adapter must return an object exposing identity_model and geometry_model."
         )
+    try:
+        import torch
+    except ImportError as exc:
+        raise RuntimeError(
+            "Model-aware protection requires PyTorch. Install backend/requirements-protection.txt."
+        ) from exc
+    if not isinstance(bundle.identity_model, torch.nn.Module) or not isinstance(
+        bundle.geometry_model, torch.nn.Module
+    ):
+        raise RuntimeError("identity_model and geometry_model must be torch.nn.Module instances.")
     return ProtectionModelBundle(bundle.identity_model, bundle.geometry_model)
