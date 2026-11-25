@@ -45,7 +45,9 @@ export default function App() {
   async function run() {
     if (!imageId) return setError("Upload an image before processing."); setBusy(true); setError("");
     try {
-      const next = method === "adversarial"\n        ? await protectImage(imageId, file?.name ?? "image", budget, iterations, seed)\n        : await process(imageId, file?.name ?? "image", method, budget, iterations, seed);
+      const next = method === "adversarial"
+        ? await protectImage(imageId, file?.name ?? "image", budget, iterations, seed)
+        : await process(imageId, file?.name ?? "image", method, budget, iterations, seed);
       setResult(next);
       setRunVersion(version => version + 1);
     } catch (e) { setError(e instanceof Error ? e.message : "Processing failed"); } finally { setBusy(false); }
