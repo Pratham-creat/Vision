@@ -30,7 +30,7 @@ def validate_image_id(image_id: str) -> str:
 
 @router.get("/capabilities")
 def capabilities() -> dict:
-    return {"methods": ["rgb", "chrominance", "perceptual"], "formats": ["jpg", "jpeg", "png", "webp"], "ai_evaluation": False}
+    return {"methods": ["rgb", "chrominance", "perceptual", "combined"], "formats": ["jpg", "jpeg", "png", "webp"], "ai_evaluation": False}
 
 
 @router.post("/images/upload")
