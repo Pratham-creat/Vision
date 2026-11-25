@@ -3,7 +3,7 @@
 Vision's `adversarial` mode is an optional, local PyTorch optimization path. It optimizes a small, bounded RGB perturbation against two differentiable surrogate models:
 
 - **Identity representation:** lower cosine similarity between the source and protected image embeddings.
-- **Facial geometry:** increase normalized landmark / face-structure divergence.
+- **Face-manipulation representation:** increase divergence in a differentiable face-morphing / face-swap conditioning representation. The adapter can combine landmarks, alignment features, and generator-conditioning features in one fixed-size tensor.
 
 The optimizer uses an L-infinity pixel budget, a small total-variation regularizer, and expectation-over-transformations (small resize and photometric changes). Original uploads are retained; the protected result is written to the normal modified-image slot and receives the normal image-quality metrics.
 
