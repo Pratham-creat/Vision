@@ -58,11 +58,29 @@ def perceptually_constrained(rgb: np.ndarray, config: PerturbationConfig) -> np.
     return lab_to_rgb(lab)
 
 
+def combined(rgb: np.ndarray, config: PerturbationConfig) -> np.ndarray:
+    """Fuse three proposals under a final per-channel RGB displacement budget."""
+    if config.budget <= 0:
+        return rgb.copy()
+    proposals = []
+    for method in ("rgb", "chrominance", "perceptual"):
+        proposal = apply_perturbation(
+            rgb,
+            PerturbationConfig(method=method, budget=config.budget,
+                               iterations=config.iterations, seed=config.seed),
+        )
+        proposals.append(proposal.astype(np.float32) - rgb.astype(np.float32))
+    fused_delta = np.mean(np.stack(proposals, axis=0), axis=0)
+    fused_delta = np.clip(fused_delta, -config.budget, config.budget)
+    return np.clip(np.rint(rgb.astype(np.float32) + fused_delta), 0, 255).astype(np.uint8)
+
+
 def apply_perturbation(rgb: np.ndarray, config: PerturbationConfig) -> np.ndarray:
     methods = {
         "rgb": controlled_rgb,
         "chrominance": chrominance,
         "perceptual": perceptually_constrained,
+        "combined": combined,
     }
     try:
         return methods[config.method](rgb, config)

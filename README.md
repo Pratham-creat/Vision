@@ -1,6 +1,6 @@
 # VISION
 
-VISION is a local, research-oriented image perturbation workstation. It applies bounded RGB, chrominance, or CIELAB-constrained perturbations and reports measurable similarity results. It does **not** claim universal protection against machine-vision systems; AI evaluation is an optional adapter surface and is clearly reported as unavailable until configured.
+VISION is a local, research-oriented image perturbation workstation. It applies bounded RGB, chrominance, CIELAB-constrained, or fused combined perturbations and reports measurable similarity results. It does **not** claim universal protection against machine-vision systems; AI evaluation is an optional adapter surface and is clearly reported as unavailable until configured.
 
 ## Architecture
 
@@ -69,12 +69,13 @@ Open `http://localhost:5173`. Configure `VITE_API_URL` if the backend is hosted 
 - `GET /api/v1/images/{image_id}/download?variant=original|modified|difference`
 - `POST /api/v1/evaluation/metrics`
 - `POST /api/v1/evaluation/ai`
+- `POST /api/v1/protection/optimize` (optional local PyTorch model-aware protection)
 
 Interactive OpenAPI documentation is available at `/docs`.
 
 ## Perturbation methods
 
-RGB mode applies reproducible, bounded channel noise. Chrominance mode changes YCrCb chroma while leaving luminance separate. Perceptual mode proposes CIELAB chroma changes, rescales them against CIEDE2000, then clips safely back to RGB. These methods are image-processing controls, not guaranteed model defenses.
+RGB mode applies reproducible, bounded channel noise. Chrominance mode changes YCrCb chroma while leaving luminance separate. Perceptual mode proposes CIELAB chroma changes, rescales them against CIEDE2000, then clips safely back to RGB. Combined mode runs all three methods independently on the same original image, averages their RGB deltas, and clips the fused per-channel displacement to the configured budget. It is an experimental fusion baseline; evaluate it against each individual method rather than assuming it is more robust. These methods are image-processing controls, not guaranteed model defenses. The optional adversarial mode optimizes a bounded perturbation against explicitly configured identity-embedding and face-manipulation PyTorch models, with small resize/photometric expectation-over-transformations and a total-variation regularizer. It returns HTTP 503 when the local adapter is not configured; it never silently substitutes random noise.
 
 ## Metrics
 
@@ -95,3 +96,16 @@ Tests cover perturbation bounds, dimensions, reproducibility, color conversion, 
 ## Research methodology and limitations
 
 Record the method, budget, iterations, seed, metrics, and processing time for each experiment. Compare original and modified images under controlled settings, then evaluate compatible models through an explicit adapter that returns labels and confidence values. No API key is bundled, no model result is fabricated, and an unavailable adapter is reported as “AI evaluation not configured.” Results are image/model/dataset specific and should not be generalized without an appropriate benchmark.
+
+
+## Model-aware protection
+
+Install PyTorch separately using a wheel compatible with your CPU/CUDA runtime:
+
+```powershell
+python -m pip install -r backend/requirements-protection.txt
+$env:VISION_PROTECTION_ADAPTER = "your_adapter_module:load_models"
+uvicorn backend.app.main:app --reload --port 8000
+```
+
+The adapter factory must return differentiable `identity_model` and `manipulation_model` PyTorch modules. Model weights and licenses remain the operator's responsibility. See [docs/AI_PROTECTION.md](docs/AI_PROTECTION.md) for the adapter contract, API schema, and benchmark protocol. The optimizer is a research baseline, not a universal defense: transfer to held-out AI systems must be measured, including recompression, resizing, cropping, screenshots, and preprocessing.
