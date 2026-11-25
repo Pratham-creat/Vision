@@ -1,7 +1,8 @@
-import numpy as np
-from PIL import Image
+import math
 
-from engine.color_space.conversions import lab_to_rgb, rgb_to_lab
+import numpy as np
+
+from engine.color_space.conversions import lab_to_rgb, rgb_to_lab, rgb_to_ycrcb, ycrcb_to_rgb
 from engine.metrics.difference_map import make_difference_map
 from engine.metrics.perceptual_metrics import calculate_metrics
 from engine.perturbation.processors import PerturbationConfig, apply_perturbation
@@ -24,8 +25,10 @@ def test_seed_is_reproducible():
 
 def test_color_round_trip():
     image = sample()
-    round_trip = lab_to_rgb(rgb_to_lab(image))
-    assert np.mean(np.abs(image.astype(int) - round_trip.astype(int))) < 3
+    lab_round_trip = lab_to_rgb(rgb_to_lab(image))
+    assert np.mean(np.abs(image.astype(int) - lab_round_trip.astype(int))) < 3
+    ycrcb_round_trip = ycrcb_to_rgb(rgb_to_ycrcb(image))
+    assert np.mean(np.abs(image.astype(int) - ycrcb_round_trip.astype(int))) < 3
 
 
 def test_metrics_and_difference_map():
@@ -35,6 +38,14 @@ def test_metrics_and_difference_map():
     assert 0 <= metrics["ssim"] <= 1
     assert metrics["maximum_pixel_difference"] >= 0
     assert make_difference_map(original, modified).size == (16, 12)
+
+
+def test_zero_budget_and_small_image_metrics():
+    original = np.full((5, 5, 3), [80, 120, 160], dtype=np.uint8)
+    modified = apply_perturbation(original, PerturbationConfig(method="rgb", budget=0))
+    metrics = calculate_metrics(original, modified)
+    assert math.isfinite(metrics["psnr"])
+    assert 0 <= metrics["ssim"] <= 1
 
 
 def test_export_input_unchanged():
