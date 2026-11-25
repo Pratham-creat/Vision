@@ -28,15 +28,18 @@ def test_upload_and_process():
 
 def test_protection_endpoint_reports_unconfigured_adapter(monkeypatch):
     monkeypatch.delenv("VISION_PROTECTION_ADAPTER", raising=False)
+    output = BytesIO()
+    Image.new("RGB", (10, 8), (120, 80, 50)).save(output, "PNG")
     with TestClient(app) as client:
-        response = client.post("/api/v1/protection/optimize", json={
-            "image_id": "00000000-0000-4000-8000-000000000001",
-            "budget": 4,
-            "iterations": 2,
+        uploaded = client.post("/api/v1/images/upload", files={
+            "file": ("sample.png", output.getvalue(), "image/png")
         })
-        # The image lookup occurs before adapter loading, so upload a real test image
-        # in the endpoint integration test to assert the explicit configuration error.
-        assert response.status_code == 404
+        image_id = uploaded.json()["image_id"]
+        response = client.post("/api/v1/protection/optimize", json={
+            "image_id": image_id, "budget": 4, "iterations": 2,
+        })
+        assert response.status_code == 503
+        assert "VISION_PROTECTION_ADAPTER" in response.json()["detail"]
 
 
 def test_capabilities_expose_model_aware_protection():
