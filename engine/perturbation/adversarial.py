@@ -40,18 +40,13 @@ def _require_torch():
     return torch, F
 
 
-def _view(image, torch, F, generator, eot: bool):
-    """Differentiable expectation-over-transformations view."""
-    if not eot:
-        return image
+def _view(image, scale: float, brightness: float, contrast: float, F):
+    """Apply one sampled differentiable transform consistently to image pairs."""
     _, _, height, width = image.shape
-    scale = float(torch.empty((), device=image.device).uniform_(0.92, 1.08, generator=generator))
     new_h = max(8, round(height * scale))
     new_w = max(8, round(width * scale))
     resized = F.interpolate(image, size=(new_h, new_w), mode="bilinear", align_corners=False)
     resized = F.interpolate(resized, size=(height, width), mode="bilinear", align_corners=False)
-    brightness = float(torch.empty((), device=image.device).uniform_(0.97, 1.03, generator=generator))
-    contrast = float(torch.empty((), device=image.device).uniform_(0.97, 1.03, generator=generator))
     mean = resized.mean(dim=(2, 3), keepdim=True)
     return ((resized - mean) * contrast + mean).mul(brightness).clamp(0, 1)
 
@@ -131,8 +126,11 @@ def optimize_protection(
         losses = []
         for _sample in range(eot_samples):
             # Use matching randomization for source and candidate.
-            view_source = _view(source, torch, F, generator, True)
-            view_candidate = _view(candidate, torch, F, generator, True)
+            scale = float(torch.empty((), device=source.device).uniform_(0.92, 1.08, generator=generator))
+            brightness = float(torch.empty((), device=source.device).uniform_(0.97, 1.03, generator=generator))
+            contrast = float(torch.empty((), device=source.device).uniform_(0.97, 1.03, generator=generator))
+            view_source = _view(source, scale, brightness, contrast, F)
+            view_candidate = _view(candidate, scale, brightness, contrast, F)
             losses.append(_objective(identity_model, geometry_model, view_source, view_candidate, torch, F))
         objective = torch.stack(losses).mean()
         tv = (delta[:, :, 1:, :] - delta[:, :, :-1, :]).abs().mean()
