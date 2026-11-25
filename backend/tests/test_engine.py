@@ -63,3 +63,17 @@ def test_export_input_unchanged():
     before = original.copy()
     apply_perturbation(original, PerturbationConfig(method="perceptual", budget=2))
     assert np.array_equal(original, before)
+
+
+def test_combined_method_is_bounded_reproducible_and_zero_budget_safe():
+    image = np.random.default_rng(21).integers(0, 256, size=(24, 32, 3), dtype=np.uint8)
+    config = PerturbationConfig(method="combined", budget=6, iterations=2, seed=11)
+    first = apply_perturbation(image, config)
+    second = apply_perturbation(image, config)
+    assert first.shape == image.shape
+    assert first.dtype == np.uint8
+    assert np.array_equal(first, second)
+    delta = np.abs(first.astype(np.int16) - image.astype(np.int16))
+    assert int(delta.max()) <= 6
+    unchanged = apply_perturbation(image, PerturbationConfig(method="combined", budget=0))
+    assert np.array_equal(unchanged, image)
