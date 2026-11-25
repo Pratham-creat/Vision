@@ -2,7 +2,7 @@
 
 Adapters expose two differentiable callables:
 - identity_model(BCHW RGB float in [0, 1]) -> identity embedding tensor
-- geometry_model(BCHW RGB float in [0, 1]) -> landmarks or face-structure tensor
+- manipulation_model(BCHW RGB float in [0, 1]) -> face-morphing / face-swap conditioning features tensor
 
 This is a research optimizer, not a universal defense. Effectiveness is bounded
 by the supplied surrogate models and must be measured against held-out systems.
@@ -17,7 +17,7 @@ import numpy as np
 
 class ProtectionModels(Protocol):
     identity_model: object
-    geometry_model: object
+    manipulation_model: object
 
 
 @dataclass(frozen=True)
@@ -60,13 +60,13 @@ def _outputs(model, image, torch, F):
     return output.flatten(start_dim=1)
 
 
-def _objective(identity_model, geometry_model, source, candidate, torch, F):
+def _objective(identity_model, manipulation_model, source, candidate, torch, F):
     source_identity = F.normalize(_outputs(identity_model, source, torch, F), dim=1)
     candidate_identity = F.normalize(_outputs(identity_model, candidate, torch, F), dim=1)
     identity_similarity = (source_identity * candidate_identity).sum(dim=1).mean()
 
-    source_geometry = _outputs(geometry_model, source, torch, F)
-    candidate_geometry = _outputs(geometry_model, candidate, torch, F)
+    source_geometry = _outputs(manipulation_model, source, torch, F)
+    candidate_geometry = _outputs(manipulation_model, candidate, torch, F)
     geometry_scale = source_geometry.detach().std().clamp_min(1e-3)
     geometry_divergence = ((candidate_geometry - source_geometry) / geometry_scale).square().mean()
     return identity_similarity - 0.25 * geometry_divergence
@@ -81,10 +81,10 @@ def optimize_protection(
     seed: int = 42,
     eot_samples: int = 3,
 ) -> ProtectionResult:
-    """Optimize bounded changes against identity and facial-geometry surrogates.
+    """Optimize bounded changes against identity and face-manipulation surrogates.
 
     Budget is an L-infinity bound in 8-bit RGB levels. The supplied models must
-    be differentiable and return embeddings / landmarks or face-structure tensors.
+    be differentiable and return embeddings / face-morphing / face-swap conditioning features tensors.
     EOT applies small differentiable resize and photometric changes during
     optimization to reduce brittleness to simple preprocessing.
     """
@@ -103,11 +103,11 @@ def optimize_protection(
 
     torch, F = _require_torch()
     identity_model = models.identity_model
-    geometry_model = models.geometry_model
+    manipulation_model = models.manipulation_model
     device = next(identity_model.parameters(), torch.empty(0)).device
     identity_model = identity_model.to(device).eval()
-    geometry_model = geometry_model.to(device).eval()
-    for model in (identity_model, geometry_model):
+    manipulation_model = manipulation_model.to(device).eval()
+    for model in (identity_model, manipulation_model):
         for parameter in model.parameters():
             parameter.requires_grad_(False)
 
@@ -118,7 +118,7 @@ def optimize_protection(
     generator = torch.Generator(device=device).manual_seed(int(seed))
 
     with torch.no_grad():
-        before = float(_objective(identity_model, geometry_model, source, source, torch, F).item())
+        before = float(_objective(identity_model, manipulation_model, source, source, torch, F).item())
 
     step_size = max(epsilon / max(1, iterations // 2), 1.0 / 255.0)
     for _ in range(iterations):
@@ -131,7 +131,7 @@ def optimize_protection(
             contrast = float(torch.empty((), device=source.device).uniform_(0.97, 1.03, generator=generator))
             view_source = _view(source, scale, brightness, contrast, F)
             view_candidate = _view(candidate, scale, brightness, contrast, F)
-            losses.append(_objective(identity_model, geometry_model, view_source, view_candidate, torch, F))
+            losses.append(_objective(identity_model, manipulation_model, view_source, view_candidate, torch, F))
         objective = torch.stack(losses).mean()
         tv = (delta[:, :, 1:, :] - delta[:, :, :-1, :]).abs().mean()
         tv = tv + (delta[:, :, :, 1:] - delta[:, :, :, :-1]).abs().mean()
@@ -145,7 +145,7 @@ def optimize_protection(
 
     with torch.no_grad():
         protected = (source + delta).clamp(0, 1)
-        after = float(_objective(identity_model, geometry_model, source, protected, torch, F).item())
+        after = float(_objective(identity_model, manipulation_model, source, protected, torch, F).item())
         output = protected.squeeze(0).permute(1, 2, 0).mul(255).round().byte().cpu().numpy()
     max_delta = int(np.abs(output.astype(np.int16) - rgb.astype(np.int16)).max())
     return ProtectionResult(output, max_delta, before, after)
