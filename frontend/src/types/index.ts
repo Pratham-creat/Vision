@@ -1,4 +1,4 @@
-export type Method = "rgb" | "chrominance" | "perceptual";
+export type Method = "rgb" | "chrominance" | "perceptual" | "combined";
 export type Metrics = {
   psnr: number;
   ssim: number;
