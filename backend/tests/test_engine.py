@@ -28,7 +28,13 @@ def test_color_round_trip():
     lab_round_trip = lab_to_rgb(rgb_to_lab(image))
     assert np.mean(np.abs(image.astype(int) - lab_round_trip.astype(int))) < 3
     ycrcb_round_trip = ycrcb_to_rgb(rgb_to_ycrcb(image))
-    assert np.mean(np.abs(image.astype(int) - ycrcb_round_trip.astype(int))) < 3
+    assert np.mean(np.abs(image.astype(int) - ycrcb_round_trip.astype(int))) < 1
+
+
+def test_ycrcb_round_trip_on_varied_pixels():
+    image = np.random.default_rng(17).integers(0, 256, size=(32, 48, 3), dtype=np.uint8)
+    round_trip = ycrcb_to_rgb(rgb_to_ycrcb(image))
+    assert np.mean(np.abs(image.astype(np.int16) - round_trip.astype(np.int16))) < 1
 
 
 def test_metrics_and_difference_map():
@@ -41,11 +47,15 @@ def test_metrics_and_difference_map():
 
 
 def test_zero_budget_and_small_image_metrics():
-    original = np.full((5, 5, 3), [80, 120, 160], dtype=np.uint8)
-    modified = apply_perturbation(original, PerturbationConfig(method="rgb", budget=0))
-    metrics = calculate_metrics(original, modified)
-    assert math.isfinite(metrics["psnr"])
-    assert 0 <= metrics["ssim"] <= 1
+    for size in (1, 2, 5, 7):
+        original = np.full((size, size, 3), [80, 120, 160], dtype=np.uint8)
+        for method in ("rgb", "chrominance", "perceptual"):
+            modified = apply_perturbation(original, PerturbationConfig(method=method, budget=0))
+            assert np.array_equal(original, modified)
+            metrics = calculate_metrics(original, modified)
+            assert metrics["psnr"] == 100.0
+            assert math.isfinite(metrics["ssim"])
+            assert metrics["ssim"] == 1.0
 
 
 def test_export_input_unchanged():
