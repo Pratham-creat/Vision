@@ -108,4 +108,4 @@ $env:VISION_PROTECTION_ADAPTER = "your_adapter_module:load_models"
 uvicorn backend.app.main:app --reload --port 8000
 ```
 
-The adapter factory must return differentiable `identity_model` and `geometry_model` PyTorch modules. Model weights and licenses remain the operator's responsibility. See [docs/AI_PROTECTION.md](docs/AI_PROTECTION.md) for the adapter contract, API schema, and benchmark protocol. The optimizer is a research baseline, not a universal defense: transfer to held-out AI systems must be measured, including recompression, resizing, cropping, screenshots, and preprocessing.
+The adapter factory must return differentiable `identity_model` and `manipulation_model` PyTorch modules. Model weights and licenses remain the operator's responsibility. See [docs/AI_PROTECTION.md](docs/AI_PROTECTION.md) for the adapter contract, API schema, and benchmark protocol. The optimizer is a research baseline, not a universal defense: transfer to held-out AI systems must be measured, including recompression, resizing, cropping, screenshots, and preprocessing.
