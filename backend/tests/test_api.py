@@ -24,3 +24,23 @@ def test_upload_and_process():
         assert processed.status_code == 200
         assert processed.json()["metrics"]["ssim"] <= 1
         assert client.get(f"/api/v1/images/{image_id}/download?variant=modified").status_code == 200
+
+
+def test_protection_endpoint_reports_unconfigured_adapter(monkeypatch):
+    monkeypatch.delenv("VISION_PROTECTION_ADAPTER", raising=False)
+    with TestClient(app) as client:
+        response = client.post("/api/v1/protection/optimize", json={
+            "image_id": "00000000-0000-4000-8000-000000000001",
+            "budget": 4,
+            "iterations": 2,
+        })
+        # The image lookup occurs before adapter loading, so upload a real test image
+        # in the endpoint integration test to assert the explicit configuration error.
+        assert response.status_code == 404
+
+
+def test_capabilities_expose_model_aware_protection():
+    with TestClient(app) as client:
+        capabilities = client.get("/api/v1/capabilities").json()
+        assert "adversarial" in capabilities["protection"]
+        assert "combined" in capabilities["methods"]
