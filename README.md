@@ -1,6 +1,6 @@
 # VISION
 
-VISION is a local, research-oriented image perturbation workstation. It applies bounded RGB, chrominance, or CIELAB-constrained perturbations and reports measurable similarity results. It does **not** claim universal protection against machine-vision systems; AI evaluation is an optional adapter surface and is clearly reported as unavailable until configured.
+VISION is a local, research-oriented image perturbation workstation. It applies bounded RGB, chrominance, CIELAB-constrained, or fused combined perturbations and reports measurable similarity results. It does **not** claim universal protection against machine-vision systems; AI evaluation is an optional adapter surface and is clearly reported as unavailable until configured.
 
 ## Architecture
 
@@ -74,7 +74,7 @@ Interactive OpenAPI documentation is available at `/docs`.
 
 ## Perturbation methods
 
-RGB mode applies reproducible, bounded channel noise. Chrominance mode changes YCrCb chroma while leaving luminance separate. Perceptual mode proposes CIELAB chroma changes, rescales them against CIEDE2000, then clips safely back to RGB. These methods are image-processing controls, not guaranteed model defenses.
+RGB mode applies reproducible, bounded channel noise. Chrominance mode changes YCrCb chroma while leaving luminance separate. Perceptual mode proposes CIELAB chroma changes, rescales them against CIEDE2000, then clips safely back to RGB. Combined mode runs all three methods independently on the same original image, averages their RGB deltas, and clips the fused per-channel displacement to the configured budget. It is an experimental fusion baseline; evaluate it against each individual method rather than assuming it is more robust. These methods are image-processing controls, not guaranteed model defenses.
 
 ## Metrics
 
