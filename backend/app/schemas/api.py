@@ -3,7 +3,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
-Method = Literal["rgb", "chrominance", "perceptual"]
+Method = Literal["rgb", "chrominance", "perceptual", "combined"]
 
 
 class ProcessRequest(BaseModel):
