@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import time
 
@@ -39,7 +40,7 @@ def validate_image_id(image_id: str) -> str:
 
 @router.get("/capabilities")
 def capabilities() -> dict:
-    return {"methods": ["rgb", "chrominance", "perceptual", "combined"], "protection": ["adversarial"], "formats": ["jpg", "jpeg", "png", "webp"], "ai_evaluation": False, "protection_models_configured": bool(__import__("os").getenv("VISION_PROTECTION_ADAPTER"))}
+    return {"methods": ["rgb", "chrominance", "perceptual", "combined"], "protection": ["adversarial"], "formats": ["jpg", "jpeg", "png", "webp"], "ai_evaluation": False, "protection_models_configured": bool(os.getenv("VISION_PROTECTION_ADAPTER"))}
 
 
 @router.post("/images/upload")
