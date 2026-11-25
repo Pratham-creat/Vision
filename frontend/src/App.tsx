@@ -24,7 +24,6 @@ export default function App() {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]); const [historyLoading, setHistoryLoading] = useState(false); const [historyError, setHistoryError] = useState("");
 
   useEffect(() => { health().then(ok => { setOnline(ok); setStatus(ok ? "Engine ready" : "Backend unavailable — start FastAPI to continue"); setTimeout(() => setReady(true), 250); }); }, []);
-  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   useEffect(() => {
     if (tab === "Image History" && online) {
       getHistory().then(setHistoryItems).catch(() => setHistoryItems([]));
@@ -33,7 +32,7 @@ export default function App() {
 
   const metrics = result?.metrics;
   async function choose(next: File) {
-    setError(""); setFile(next); setPreview(URL.createObjectURL(next)); setResult(undefined);
+    setError(""); setFile(next); setImageId(""); setResult(undefined);
     try { const uploaded = await upload(next); setImageId(uploaded.image_id); } catch (e) { setError(e instanceof Error ? e.message : "Upload failed"); }
   }
   async function run() {
