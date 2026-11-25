@@ -17,4 +17,7 @@ def rgb_to_ycrcb(rgb: np.ndarray) -> np.ndarray:
 
 
 def ycrcb_to_rgb(ycrcb: np.ndarray) -> np.ndarray:
-    return np.clip(cv2.cvtColor(ycrcb.astype(np.float32), cv2.COLOR_YCrCb2RGB), 0, 255).astype(np.uint8)
+    # OpenCV's YCrCb float conversion expects normalized [0, 1] values.
+    # These values use the uint8 [0, 255] encoding, so convert back to uint8.
+    encoded = np.clip(np.rint(ycrcb), 0, 255).astype(np.uint8)
+    return cv2.cvtColor(encoded, cv2.COLOR_YCrCb2RGB)
