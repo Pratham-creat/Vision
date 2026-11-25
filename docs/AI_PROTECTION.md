@@ -18,7 +18,7 @@ python -m pip install -r backend/requirements-protection.txt
 Create a local Python adapter module. Its `load_models()` factory must return an object exposing two PyTorch modules:
 
 - `identity_model`: accepts BCHW RGB float tensors in [0, 1], returns a batch-first identity embedding tensor.
-- `geometry_model`: accepts BCHW RGB float tensors in [0, 1], returns a batch-first landmarks or face-structure tensor.
+- `manipulation_model`: accepts BCHW RGB float tensors in [0, 1], returns a batch-first face-morphing / face-swap conditioning representation. A wrapper may combine differentiable landmark, alignment, and generator-conditioning features.
 
 Set the environment variable before starting the API:
 
