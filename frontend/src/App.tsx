@@ -25,9 +25,16 @@ export default function App() {
 
   useEffect(() => { health().then(ok => { setOnline(ok); setStatus(ok ? "Engine ready" : "Backend unavailable — start FastAPI to continue"); setTimeout(() => setReady(true), 250); }); }, []);
   useEffect(() => {
+    let active = true;
     if (tab === "Image History" && online) {
-      getHistory().then(setHistoryItems).catch(() => setHistoryItems([]));
+      setHistoryLoading(true);
+      setHistoryError("");
+      getHistory()
+        .then(items => { if (active) setHistoryItems(items); })
+        .catch(error => { if (active) setHistoryError(error instanceof Error ? error.message : "Could not load image history."); })
+        .finally(() => { if (active) setHistoryLoading(false); });
     }
+    return () => { active = false; };
   }, [tab, online, runVersion]);
 
   const metrics = result?.metrics;
