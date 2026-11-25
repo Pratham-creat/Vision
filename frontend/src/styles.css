@@ -2,8 +2,19 @@
 @tailwind base; @tailwind components; @tailwind utilities;
 :root { font-family: "IBM Plex Sans", system-ui, sans-serif; color: #242927; background: #f3f4f1; font-synthesis: none; }
 * { box-sizing: border-box; } body { margin: 0; min-width: 1080px; } button, input, select { font: inherit; }
-.app { min-height: 100vh; display: flex; background: #f3f4f1; } .dark { filter: invert(.9) hue-rotate(180deg); }
-.dark .comparison { filter: invert(1) hue-rotate(180deg); }
+.app { min-height: 100vh; display: flex; background: #f3f4f1; }
+.app.dark { background: #171d1a; color: #e4ebe6; color-scheme: dark; }
+.app.dark .sidebar { background: #202925; border-color: #34413a; }
+.app.dark header, .app.dark .image-meta, .app.dark .metrics, .app.dark .metric { border-color: #34413a; }
+.app.dark .nav, .app.dark .sidebar-foot, .app.dark .connection, .app.dark .metric span { color: #b5c2ba; }
+.app.dark .nav.active, .app.dark .nav:hover { background: #2b3a33; color: #a7d2c3; }
+.app.dark .dropzone, .app.dark .result-placeholder, .app.dark .empty-panel { background: #202925; border-color: #46564d; color: #aebbb3; }
+.app.dark .dropzone strong, .app.dark .empty-panel h2, .app.dark .result-placeholder p { color: #e0e8e2; }
+.app.dark select, .app.dark input[type=number] { background: #202925; border-color: #46564d; color: #e4ebe6; }
+.app.dark .comparison { background: #202925; border-color: #46564d; }
+.app.dark .compare-modified { background-color: #202925; }
+.app.dark .history-table th, .app.dark .history-table td { border-color: #34413a; color: #cbd6cf; }
+.app.dark .history-table th { color: #9eaea4; }
 .sidebar { width: 224px; background: #e8ebe6; border-right: 1px solid #d4d9d3; display: flex; flex-direction: column; padding: 22px 14px; }
 .brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; letter-spacing: .16em; padding: 0 9px 36px; }
 .brand-mark { width: 27px; height: 27px; display: grid; place-items: center; background: #276b62; color: #fff; font-size: 14px; }

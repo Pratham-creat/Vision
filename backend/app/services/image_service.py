@@ -6,7 +6,6 @@ import uuid
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
 from sqlalchemy.orm import Session
 
 from backend.app.core.config import settings
@@ -19,7 +18,15 @@ from engine.preprocessing.image_loader import load_image
 
 
 def path_for(image_id: str, suffix: str) -> Path:
-    return settings.storage_dir / f"{image_id}_{suffix}.png"
+    try:
+        parsed = uuid.UUID(image_id)
+    except (ValueError, AttributeError, TypeError) as exc:
+        raise ValueError("Invalid image_id format.") from exc
+    if str(parsed) != image_id.lower():
+        raise ValueError("Invalid image_id format.")
+    if suffix not in {"original", "modified", "difference"}:
+        raise ValueError("Invalid image variant.")
+    return settings.storage_dir / f"{parsed}_{suffix}.png"
 
 
 def save_upload(data: bytes, filename: str) -> dict[str, str | int]:

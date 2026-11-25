@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
+import re
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -19,6 +19,13 @@ from engine.perturbation.processors import PerturbationConfig
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1")
+_IMAGE_ID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
+
+
+def validate_image_id(image_id: str) -> str:
+    if not _IMAGE_ID_RE.fullmatch(image_id):
+        raise HTTPException(400, "Invalid image_id format.")
+    return image_id
 
 
 @router.get("/capabilities")
@@ -28,7 +35,7 @@ def capabilities() -> dict:
 
 @router.post("/images/upload")
 async def upload_image(file: UploadFile = File(...)) -> dict:
-    if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
+    if file.content_type not in {"image/jpeg", "image/jpg", "image/png", "image/webp"}:
         raise HTTPException(415, "Only JPG, PNG, and WebP files are supported.")
     data = await file.read()
     if len(data) > settings.max_upload_size:
@@ -41,6 +48,7 @@ async def upload_image(file: UploadFile = File(...)) -> dict:
 
 @router.post("/images/process", response_model=ProcessResponse)
 def process(request: ProcessRequest, db: Session = Depends(get_db)) -> dict:
+    validate_image_id(request.image_id)
     try:
         return process_image(db, request.image_id, request.filename or request.image_id, PerturbationConfig(
             method=request.method, budget=request.budget, iterations=request.iterations, seed=request.seed
@@ -60,6 +68,7 @@ def history(db: Session = Depends(get_db)) -> list[dict]:
 
 @router.get("/images/{image_id}")
 def get_image(image_id: str, db: Session = Depends(get_db)) -> dict:
+    validate_image_id(image_id)
     record = db.get(Experiment, image_id)
     if not record:
         raise HTTPException(404, "Experiment not found.")
@@ -68,14 +77,21 @@ def get_image(image_id: str, db: Session = Depends(get_db)) -> dict:
 
 @router.get("/images/{image_id}/download")
 def download(image_id: str, variant: str = Query("modified", pattern="^(original|modified|difference)$")):
+    validate_image_id(image_id)
     path = path_for(image_id, variant)
     if not path.exists():
         raise HTTPException(404, "Image variant not found.")
-    return FileResponse(path, media_type="image/png", filename=f"vision-{variant}.png")
+    return FileResponse(
+        path,
+        media_type="image/png",
+        filename=f"vision-{variant}.png",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
+    )
 
 
 @router.post("/images/compare")
 def compare(request: ProcessRequest, db: Session = Depends(get_db)) -> dict:
+    validate_image_id(request.image_id)
     record = db.get(Experiment, request.image_id)
     if not record:
         raise HTTPException(404, "Experiment not found.")
