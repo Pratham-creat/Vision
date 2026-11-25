@@ -45,3 +45,17 @@ export function assetUrl(path: string, cacheBust?: number) {
   return `${url}${url.includes("?") ? "&" : "?"}t=${cacheBust}`;
 }
 export { API };
+
+export async function protectImage(imageId: string, filename: string, budget: number, iterations: number, seed: number) {
+  const response = await fetch(endpoint("/api/v1/protection/optimize"), {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image_id: imageId, filename, budget, iterations, seed, eot_samples: 3 }),
+  });
+  if (!response.ok) throw new Error(await parseError(response));
+  return response.json() as Promise<ProcessResult & {
+    configured_models: string[];
+    objective_before: number;
+    objective_after: number;
+    max_channel_delta: number;
+  }>;
+}
