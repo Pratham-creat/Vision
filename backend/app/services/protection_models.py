@@ -10,7 +10,7 @@ from typing import Any
 @dataclass(frozen=True)
 class ProtectionModelBundle:
     identity_model: Any
-    geometry_model: Any
+    manipulation_model: Any
 
 
 def load_protection_models() -> ProtectionModelBundle:
@@ -35,9 +35,9 @@ def load_protection_models() -> ProtectionModelBundle:
     except Exception as exc:
         raise RuntimeError(f"Could not initialize protection adapter '{target}': {exc}") from exc
 
-    if not hasattr(bundle, "identity_model") or not hasattr(bundle, "geometry_model"):
+    if not hasattr(bundle, "identity_model") or not hasattr(bundle, "manipulation_model"):
         raise RuntimeError(
-            "Adapter must return an object exposing identity_model and geometry_model."
+            "Adapter must return an object exposing identity_model and manipulation_model."
         )
     try:
         import torch
@@ -46,7 +46,7 @@ def load_protection_models() -> ProtectionModelBundle:
             "Model-aware protection requires PyTorch. Install backend/requirements-protection.txt."
         ) from exc
     if not isinstance(bundle.identity_model, torch.nn.Module) or not isinstance(
-        bundle.geometry_model, torch.nn.Module
+        bundle.manipulation_model, torch.nn.Module
     ):
-        raise RuntimeError("identity_model and geometry_model must be torch.nn.Module instances.")
-    return ProtectionModelBundle(bundle.identity_model, bundle.geometry_model)
+        raise RuntimeError("identity_model and manipulation_model must be torch.nn.Module instances.")
+    return ProtectionModelBundle(bundle.identity_model, bundle.manipulation_model)
