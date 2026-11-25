@@ -3,7 +3,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
-Method = Literal["rgb", "chrominance", "perceptual", "combined"]
+Method = Literal["rgb", "chrominance", "perceptual", "combined", "adversarial"]
 
 
 class ProcessRequest(BaseModel):
@@ -13,6 +13,15 @@ class ProcessRequest(BaseModel):
     budget: float = Field(default=4.0, ge=0, le=32)
     iterations: int = Field(default=1, ge=1, le=20)
     seed: int = Field(default=42, ge=0, le=2**31 - 1)
+
+
+class ProtectionRequest(BaseModel):
+    image_id: str
+    filename: str | None = Field(default=None, max_length=255)
+    budget: float = Field(default=4.0, ge=0, le=16)
+    iterations: int = Field(default=20, ge=1, le=200)
+    seed: int = Field(default=42, ge=0, le=2**31 - 1)
+    eot_samples: int = Field(default=3, ge=1, le=16)
 
 
 class MetricsResponse(BaseModel):
@@ -36,6 +45,13 @@ class ProcessResponse(BaseModel):
     modified_size: int
     processing_time_ms: float
     metrics: MetricsResponse
+
+
+class ProtectionResponse(ProcessResponse):
+    configured_models: list[str]
+    objective_before: float
+    objective_after: float
+    max_channel_delta: int
 
 
 class AIRequest(BaseModel):
