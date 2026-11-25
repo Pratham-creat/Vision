@@ -108,7 +108,7 @@ def optimize_image_protection(request: ProtectionRequest, db: Session = Depends(
             "original_size": original_path.stat().st_size,
             "modified_size": modified_path.stat().st_size,
             "processing_time_ms": duration_ms, "metrics": metrics,
-            "configured_models": ["identity", "facial_geometry"],
+            "configured_models": ["identity", "face_manipulation"],
             "objective_before": result.objective_before,
             "objective_after": result.objective_after,
             "max_channel_delta": result.max_channel_delta,
