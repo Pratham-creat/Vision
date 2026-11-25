@@ -17,6 +17,8 @@ class PerturbationConfig:
 
 
 def controlled_rgb(rgb: np.ndarray, config: PerturbationConfig) -> np.ndarray:
+    if config.budget <= 0:
+        return rgb.copy()
     rng = np.random.default_rng(config.seed)
     result = rgb.astype(np.int16).copy()
     amplitude = max(0.0, min(config.budget, 32.0))
@@ -27,19 +29,24 @@ def controlled_rgb(rgb: np.ndarray, config: PerturbationConfig) -> np.ndarray:
 
 
 def chrominance(rgb: np.ndarray, config: PerturbationConfig) -> np.ndarray:
+    if config.budget <= 0:
+        return rgb.copy()
     rng = np.random.default_rng(config.seed)
     ycrcb = rgb_to_ycrcb(rgb)
     amplitude = max(0.0, min(config.budget * 0.8, 24.0))
-    noise = rng.uniform(-amplitude, amplitude, ycrcb[:, :, 1:].shape)
-    ycrcb[:, :, 1:] += noise
+    for _ in range(max(1, config.iterations)):
+        noise = rng.uniform(-amplitude, amplitude, ycrcb[:, :, 1:].shape)
+        ycrcb[:, :, 1:] = np.clip(ycrcb[:, :, 1:] + noise, 0, 255)
     return ycrcb_to_rgb(ycrcb)
 
 
 def perceptually_constrained(rgb: np.ndarray, config: PerturbationConfig) -> np.ndarray:
+    if config.budget <= 0:
+        return rgb.copy()
     rng = np.random.default_rng(config.seed)
     lab = rgb_to_lab(rgb)
     # OpenCV's Lab uses L in [0,255]; skimage's CIE Lab uses L in [0,100].
-    target = max(0.05, min(config.budget, 20.0))
+    target = min(config.budget, 20.0)
     for _ in range(max(1, config.iterations)):
         candidate = lab.copy()
         candidate[:, :, 1:] += rng.uniform(-target, target, candidate[:, :, 1:].shape)
