@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
+
+import numpy as np
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
@@ -12,8 +15,14 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import settings
 from backend.app.database.session import get_db
 from backend.app.models.experiment import Experiment
-from backend.app.schemas.api import AIRequest, AIResponse, ProcessRequest, ProcessResponse
+from backend.app.schemas.api import AIRequest, AIResponse, ProcessRequest, ProcessResponse, ProtectionRequest, ProtectionResponse
 from backend.app.services.image_service import path_for, process_image, save_upload
+from backend.app.services.protection_models import load_protection_models
+from engine.export.image_export import encode_png
+from engine.metrics.difference_map import make_difference_map
+from engine.metrics.perceptual_metrics import calculate_metrics
+from engine.preprocessing.image_loader import load_image
+from engine.perturbation.adversarial import optimize_protection
 from evaluation.adapters.unconfigured import unavailable_message
 from engine.perturbation.processors import PerturbationConfig
 
@@ -30,7 +39,7 @@ def validate_image_id(image_id: str) -> str:
 
 @router.get("/capabilities")
 def capabilities() -> dict:
-    return {"methods": ["rgb", "chrominance", "perceptual", "combined"], "formats": ["jpg", "jpeg", "png", "webp"], "ai_evaluation": False}
+    return {"methods": ["rgb", "chrominance", "perceptual", "combined"], "protection": ["adversarial"], "formats": ["jpg", "jpeg", "png", "webp"], "ai_evaluation": False, "protection_models_configured": bool(__import__("os").getenv("VISION_PROTECTION_ADAPTER"))}
 
 
 @router.post("/images/upload")
@@ -56,6 +65,56 @@ def process(request: ProcessRequest, db: Session = Depends(get_db)) -> dict:
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post("/protection/optimize", response_model=ProtectionResponse)
+def optimize_image_protection(request: ProtectionRequest, db: Session = Depends(get_db)) -> dict:
+    validate_image_id(request.image_id)
+    original_path = path_for(request.image_id, "original")
+    if not original_path.exists():
+        raise HTTPException(404, "Image was not found.")
+    try:
+        models = load_protection_models()
+        original = np.asarray(load_image(original_path))
+        started = time.perf_counter()
+        result = optimize_protection(
+            original, models, budget=request.budget, iterations=request.iterations,
+            seed=request.seed, eot_samples=request.eot_samples,
+        )
+        duration_ms = (time.perf_counter() - started) * 1000
+        modified = result.image
+        modified_path = path_for(request.image_id, "modified")
+        difference_path = path_for(request.image_id, "difference")
+        modified_path.write_bytes(encode_png(modified))
+        make_difference_map(original, modified).save(difference_path, format="PNG", optimize=True)
+        metrics = calculate_metrics(original, modified)
+        filename = request.filename or request.image_id
+        record = Experiment(
+            id=request.image_id, filename=filename, method="adversarial",
+            budget=request.budget, duration_ms=duration_ms,
+            original_path=str(original_path), modified_path=str(modified_path),
+            metrics_json=json.dumps(metrics), width=original.shape[1], height=original.shape[0],
+        )
+        db.merge(record)
+        db.commit()
+        return {
+            "image_id": request.image_id, "filename": filename,
+            "original_url": f"/api/v1/images/{request.image_id}/download?variant=original",
+            "modified_url": f"/api/v1/images/{request.image_id}/download?variant=modified",
+            "difference_url": f"/api/v1/images/{request.image_id}/download?variant=difference",
+            "width": original.shape[1], "height": original.shape[0],
+            "original_size": original_path.stat().st_size,
+            "modified_size": modified_path.stat().st_size,
+            "processing_time_ms": duration_ms, "metrics": metrics,
+            "configured_models": ["identity", "facial_geometry"],
+            "objective_before": result.objective_before,
+            "objective_after": result.objective_after,
+            "max_channel_delta": result.max_channel_delta,
+        }
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    except (ValueError, TypeError) as exc:
         raise HTTPException(422, str(exc)) from exc
 
 
