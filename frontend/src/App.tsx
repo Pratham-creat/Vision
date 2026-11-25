@@ -3,7 +3,7 @@ import { Activity, BarChart3, Check, Download, FileImage, History, Moon, PanelLe
 import { assetUrl, getHistory, health, process, upload } from "./services/api";
 import type { HistoryItem, Method, ProcessResult } from "./types";
 
-const methodLabels: Record<Method, string> = { rgb: "RGB channel", chrominance: "Chrominance", perceptual: "Perceptually constrained" };
+const methodLabels: Record<Method, string> = { rgb: "RGB channel", chrominance: "Chrominance", perceptual: "Perceptually constrained", combined: "Combined (RGB + Chrominance + Perceptual)" };
 
 function Loading({ status }: { status: string }) {
   return <div className="loading"><div className="scan-grid"><span /><span /><span /><span /><span /><span /><span /><span /><span /></div><div className="wordmark">VISION</div><p>Initializing image processing engine...</p><small>{status}</small><div className="loader-line"><i /></div></div>;
